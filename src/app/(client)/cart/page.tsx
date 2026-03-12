@@ -1,223 +1,239 @@
 "use client";
 
-import PaymentForm from "@/components/client/PaymentForm";
-import ShippingForm from "@/components/client/ShippingForm";
-import useCartStore from "@/stores/cartStore";
-import { CartItemsType, ShippingFormInputs } from "@/types";
-import { ArrowRight, Trash2 } from "lucide-react";
+import { ArrowRight, Loader2, ShoppingCart, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
-const steps = [
-  {
-    id: 1,
-    title: "Shopping Cart",
-  },
-  {
-    id: 2,
-    title: "Shipping Address",
-  },
-  {
-    id: 3,
-    title: "Payment Method",
-  },
-];
+type CartProduct = {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  images: { id: string; url: string; productId: string }[];
+};
 
-// TEMPORARY
-// const cartItems: CartItemsType = [
-//   {
-//     id: 1,
-//     name: "Adidas CoreFit T-Shirt",
-//     shortDescription:
-//       "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-//     description:
-//       "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-//     price: 39.9,
-//     sizes: ["s", "m", "l", "xl", "xxl"],
-//     colors: ["gray", "purple", "green"],
-//     images: {
-//       gray: "/products/1g.png",
-//       purple: "/products/1p.png",
-//       green: "/products/1gr.png",
-//     },
-//     quantity: 1,
-//     selectedSize: "m",
-//     selectedColor: "gray",
-//   },
-//   {
-//     id: 2,
-//     name: "Puma Ultra Warm Zip",
-//     shortDescription:
-//       "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-//     description:
-//       "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-//     price: 59.9,
-//     sizes: ["s", "m", "l", "xl"],
-//     colors: ["gray", "green"],
-//     images: { gray: "/products/2g.png", green: "/products/2gr.png" },
-//     quantity: 1,
-//     selectedSize: "l",
-//     selectedColor: "gray",
-//   },
-//   {
-//     id: 3,
-//     name: "Nike Air Essentials Pullover",
-//     shortDescription:
-//       "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-//     description:
-//       "Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit. Lorem ipsum dolor sit amet consect adipisicing elit lorem ipsum dolor sit.",
-//     price: 69.9,
-//     sizes: ["s", "m", "l"],
-//     colors: ["green", "blue", "black"],
-//     images: {
-//       green: "/products/3gr.png",
-//       blue: "/products/3b.png",
-//       black: "/products/3bl.png",
-//     },
-//     quantity: 1,
-//     selectedSize: "l",
-//     selectedColor: "black",
-//   },
-// ];
+type CartItem = {
+  id: string;
+  cartId: string;
+  productId: string;
+  quantity: number;
+  product: CartProduct;
+};
+
+type Cart = {
+  id: string;
+  items: CartItem[];
+};
 
 const CartPage = () => {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [shippingForm, setShippingForm] = useState<ShippingFormInputs>();
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const activeStep = parseInt(searchParams.get("step") || "1");
+  const fetchCart = async () => {
+    try {
+      const res = await fetch("/api/cart");
+      if (res.status === 401) {
+        setCart(null);
+        return;
+      }
+      const data = await res.json();
+      if (data.success) setCart(data.data);
+    } catch (error) {
+      toast.error("Gagal memuat keranjang");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const { cart, removeFromCart } = useCartStore();
-  return (
-    <div className="flex flex-col gap-8 items-center justify-center mt-12">
-      {/* TITLE */}
-      <h1 className="text-2xl font-medium">Your Shopping Cart</h1>
-      {/* STEPS */}
-      <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
-        {steps.map((step) => (
-          <div
-            className={`flex items-center gap-2 border-b-2 pb-4 ${
-              step.id === activeStep ? "border-gray-800" : "border-gray-200"
-            }`}
-            key={step.id}
-          >
-            <div
-              className={`w-6 h-6 rounded-full text-white p-4 flex items-center justify-center ${
-                step.id === activeStep ? "bg-gray-800" : "bg-gray-400"
-              }`}
-            >
-              {step.id}
-            </div>
-            <p
-              className={`text-sm font-medium ${
-                step.id === activeStep ? "text-gray-800" : "text-gray-400"
-              }`}
-            >
-              {step.title}
-            </p>
-          </div>
-        ))}
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  const handleRemove = async (productId: string) => {
+    setRemovingId(productId);
+    try {
+      const res = await fetch("/api/cart/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.message || "Gagal menghapus item");
+        return;
+      }
+      toast.success("Item dihapus dari keranjang");
+      fetchCart();
+    } catch {
+      toast.error("Terjadi kesalahan");
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleCheckout = async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch("/api/checkout", { method: "POST" });
+      const data = await res.json();
+
+      if (res.status === 401) {
+        toast.error("Silakan masuk terlebih dahulu");
+        return;
+      }
+
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Checkout gagal");
+        return;
+      }
+
+      const { snapToken } = data.data;
+
+      // Load Midtrans Snap dan tampilkan popup pembayaran
+      if (typeof window !== "undefined" && (window as any).snap) {
+        (window as any).snap.pay(snapToken, {
+          onSuccess: () => {
+            toast.success("Pembayaran berhasil!");
+            fetchCart();
+          },
+          onPending: () => toast.info("Menunggu pembayaran..."),
+          onError: () => toast.error("Pembayaran gagal"),
+          onClose: () => toast.info("Popup pembayaran ditutup"),
+        });
+      } else {
+        toast.error("Midtrans Snap tidak tersedia. Pastikan MIDTRANS_CLIENT_KEY sudah dikonfigurasi.");
+      }
+    } catch {
+      toast.error("Checkout gagal, coba lagi");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const totalAmount = cart?.items.reduce(
+    (sum, item) => sum + item.product.price * item.quantity,
+    0
+  ) ?? 0;
+
+  const formatRupiah = (amount: number) =>
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="animate-spin w-8 h-8 text-gray-400" />
       </div>
-      {/* STEPS & DETAILS */}
-      <div className="w-full flex flex-col lg:flex-row gap-16">
-        {/* STEPS */}
-        <div className="w-full lg:w-7/12 shadow-lg border-1 border-gray-100 p-8 rounded-lg flex flex-col gap-8">
-          {activeStep === 1 ? (
-            cart.map((item) => (
-              // SINGLE CART ITEM
-              <div
-                className="flex items-center justify-between"
-                key={item.id + item.selectedSize + item.selectedColor}
-              >
-                {/* IMAGE AND DETAILS */}
-                <div className="flex gap-8">
-                  {/* IMAGE */}
-                  <div className="relative w-32 h-32 bg-gray-50 rounded-lg overflow-hidden">
+    );
+  }
+
+  if (!cart) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-gray-400">
+        <ShoppingCart className="w-16 h-16" />
+        <p className="text-lg font-medium">Silakan masuk untuk melihat keranjang Anda</p>
+        <Link href="/auth/login" className="text-sm text-primary hover:underline">
+          Masuk sekarang →
+        </Link>
+      </div>
+    );
+  }
+
+  if (cart.items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-gray-400">
+        <ShoppingCart className="w-16 h-16" />
+        <p className="text-lg font-medium">Keranjang Anda kosong</p>
+        <Link href="/products" className="text-sm text-primary hover:underline">
+          Mulai belanja →
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-8 mt-12">
+      <h1 className="text-2xl font-medium">Keranjang Belanja</h1>
+
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* CART ITEMS */}
+        <div className="w-full lg:w-7/12 shadow-lg border border-gray-100 p-8 rounded-lg flex flex-col gap-6">
+          {cart.items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between border-b pb-4 last:border-0">
+              <div className="flex gap-4">
+                <div className="relative w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                  {item.product.images?.[0]?.url ? (
                     <Image
-                      src={item.images[item.selectedColor]}
-                      alt={item.name}
+                      src={item.product.images[0].url}
+                      alt={item.product.name}
                       fill
-                      className="object-contain"
+                      className="object-cover"
                     />
-                  </div>
-                  {/* ITEM DETAILS */}
-                  <div className="flex flex-col justify-between">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">{item.name}</p>
-                      <p className="text-xs text-gray-500">
-                        Quantity: {item.quantity}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Size: {item.selectedSize}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Color: {item.selectedColor}
-                      </p>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                      <ShoppingCart className="w-6 h-6" />
                     </div>
-                    <p className="font-medium">${item.price.toFixed(2)}</p>
-                  </div>
+                  )}
                 </div>
-                {/* DELETE BUTTON */}
-                <button
-                  onClick={() => removeFromCart(item)}
-                  className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 transition-all duration-300 text-red-400 flex items-center justify-center cursor-pointer"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                <div className="flex flex-col justify-between">
+                  <p className="font-medium text-sm">{item.product.name}</p>
+                  <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                  <p className="font-medium text-sm">{formatRupiah(item.product.price)}</p>
+                </div>
               </div>
-            ))
-          ) : activeStep === 2 ? (
-            <ShippingForm setShippingForm={setShippingForm} />
-          ) : activeStep === 3 && shippingForm ? (
-            <PaymentForm />
-          ) : (
-            <p className="text-sm text-gray-500">
-              Please fill in the shipping form to continue.
-            </p>
-          )}
+              <button
+                onClick={() => handleRemove(item.productId)}
+                disabled={removingId === item.productId}
+                className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 transition-all text-red-400 flex items-center justify-center cursor-pointer disabled:opacity-50"
+              >
+                {removingId === item.productId ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3 h-3" />
+                )}
+              </button>
+            </div>
+          ))}
         </div>
-        {/* DETAILS */}
-        <div className="w-full lg:w-5/12 shadow-lg border-1 border-gray-100 p-8 rounded-lg flex flex-col gap-8 h-max">
-          <h2 className="font-semibold">Cart Details</h2>
-          <div className="flex flex-col gap-4">
-            <div className="flex justify-between text-sm">
-              <p className="text-gray-500">Subtotal</p>
-              <p className="font-medium">
-                $
-                {cart
-                  .reduce((acc, item) => acc + item.price * item.quantity, 0)
-                  .toFixed(2)}
-              </p>
-            </div>
-            <div className="flex justify-between text-sm">
-              <p className="text-gray-500">Discount(10%)</p>
-              <p className="font-medium">$ 10</p>
-            </div>
-            <div className="flex justify-between text-sm">
-              <p className="text-gray-500">Shipping Fee</p>
-              <p className="font-medium">$10</p>
-            </div>
-            <hr className="border-gray-200" />
-            <div className="flex justify-between">
-              <p className="text-gray-800 font-semibold">Total</p>
-              <p className="font-medium">
-                $
-                {cart
-                  .reduce((acc, item) => acc + item.price * item.quantity, 0)
-                  .toFixed(2)}
-              </p>
+
+        {/* ORDER SUMMARY */}
+        <div className="w-full lg:w-5/12 shadow-lg border border-gray-100 p-8 rounded-lg flex flex-col gap-6 h-max">
+          <h2 className="font-semibold">Ringkasan Pesanan</h2>
+          <div className="flex flex-col gap-3">
+            {cart.items.map((item) => (
+              <div key={item.id} className="flex justify-between text-sm">
+                <p className="text-gray-500">{item.product.name} x{item.quantity}</p>
+                <p className="font-medium">{formatRupiah(item.product.price * item.quantity)}</p>
+              </div>
+            ))}
+            <hr className="border-gray-200 my-2" />
+            <div className="flex justify-between font-semibold">
+              <p>Total</p>
+              <p>{formatRupiah(totalAmount)}</p>
             </div>
           </div>
-          {activeStep === 1 && (
-            <button
-              onClick={() => router.push("/cart?step=2", { scroll: false })}
-              className="w-full bg-gray-800 hover:bg-gray-900 transition-all duration-300 text-white p-2 rounded-lg cursor-pointer flex items-center justify-center gap-2"
-            >
-              Continue
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          )}
+
+          <button
+            onClick={handleCheckout}
+            disabled={checkoutLoading}
+            className="w-full bg-gray-800 hover:bg-gray-900 transition-all text-white p-3 rounded-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {checkoutLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                Bayar Sekarang
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

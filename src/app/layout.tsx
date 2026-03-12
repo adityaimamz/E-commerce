@@ -3,18 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
-import Navbar from "@/components/client/Navbar";
-import Footer from "@/components/client/Footer";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "E-Commerce",
@@ -26,11 +15,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const midtransClientKey = process.env.MIDTRANS_CLIENT_KEY || "";
+  const midtransEnv = process.env.MIDTRANS_IS_PRODUCTION === "true" ? "" : ".sandbox";
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
+        <Script
+          src={`https://app${midtransEnv}.midtrans.com/snap/snap.js`}
+          data-client-key={midtransClientKey}
+          strategy="beforeInteractive"
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

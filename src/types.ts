@@ -13,6 +13,32 @@ export type ProductType = {
 
 export type ProductsType = ProductType[];
 
+// Types for real database products from Prisma
+export type DbProductImage = {
+  id: string;
+  url: string;
+  productId: string;
+};
+
+export type DbProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  stock: number;
+  categoryId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  images: DbProductImage[];
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+};
+
+
 export type CartItemType = ProductType & {
   quantity: number;
   selectedSize: string;

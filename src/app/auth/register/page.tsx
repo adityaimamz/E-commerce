@@ -38,13 +38,23 @@ export default function Register() {
     setLoading(true);
 
     try {
-      // Mock register
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success("Berhasil mendaftar");
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: username, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Pendaftaran gagal");
+        return;
+      }
+
+      toast.success("Berhasil mendaftar, silakan masuk");
       router.push("/auth/login");
     } catch (error) {
-      toast.error("Pendaftaran gagal");
+      toast.error("Pendaftaran gagal, coba lagi");
     } finally {
       setLoading(false);
     }

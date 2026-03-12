@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { Loader2, Mail, Lock } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -24,17 +25,22 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Mock login logic
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (email === "admin@email.com") {
-        router.push("/admin");
-      } else {
-        router.push(from);
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error("Email atau password salah");
+        return;
       }
+
       toast.success("Berhasil masuk");
+      router.push(from);
+      router.refresh();
     } catch (error) {
-      toast.error("Gagal masuk");
+      toast.error("Gagal masuk, coba lagi");
     } finally {
       setLoading(false);
     }
