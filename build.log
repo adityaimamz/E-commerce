@@ -1,0 +1,26 @@
+
+> e-commerce-merged@1.0.0 build D:\GitHub\e-commerce-ui-completed
+> next build
+
+   ▲ Next.js 15.3.0
+   - Experiments (use with caution):
+     · cpus: 1
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./node_modules/.pnpm/react-remove-scroll@2.7.2_@types+react@19.2.14_react@19.2.4/node_modules/react-remove-scroll/dist/es2015/Combination.js + 21 modules
+Unexpected end of JSON input
+
+./src/components/admin/AppLineChart.tsx + 198 modules
+Unexpected end of JSON input
+
+./node_modules/.pnpm/@radix-ui+react-popper@1.2._13e0521d8aea7ebfbfb8bee1fb615c05/node_modules/@radix-ui/react-popper/dist/index.mjs + 6 modules
+Unexpected end of JSON input
+
+./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/index.js + 10 modules
+Unexpected end of JSON input
+
+
+> Build failed because of webpack errors
+ ELIFECYCLE  Command failed with exit code 1.
