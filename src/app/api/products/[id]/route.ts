@@ -3,9 +3,10 @@ import { auth } from "@/lib/auth";
 import { ProductService } from "@/services/product.service";
 import { updateProductSchema } from "@/lib/validators/product.validator";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const product = await ProductService.getProductById(params.id);
+    const { id } = await params;
+    const product = await ProductService.getProductById(id);
     if (!product) {
       return NextResponse.json({ success: false, message: "Product not found" }, { status: 404 });
     }
@@ -15,7 +16,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session || session.user.role !== "ADMIN") {
@@ -25,7 +26,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const body = await req.json();
     const data = updateProductSchema.parse(body);
 
-    const product = await ProductService.updateProduct(params.id, data);
+    const { id } = await params;
+    const product = await ProductService.updateProduct(id, data);
     return NextResponse.json({ success: true, data: product });
   } catch (error: any) {
     if (error.name === "ZodError") {
@@ -35,14 +37,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
     if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    await ProductService.deleteProduct(params.id);
+    const { id } = await params;
+    await ProductService.deleteProduct(id);
     return NextResponse.json({ success: true, message: "Product deleted" });
   } catch (error) {
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });

@@ -125,4 +125,23 @@ export class TransactionService {
 
     return status;
   }
+
+  static async getUserTransactions(userId: string) {
+    return prisma.transaction.findMany({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                images: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 }
+

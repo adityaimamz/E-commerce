@@ -15,6 +15,9 @@ enum Role {
 enum TransactionStatus {
   PENDING
   PAID
+  PACKING
+  SHIPPED
+  DELIVERED
   FAILED
   CANCELLED
   EXPIRED

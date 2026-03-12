@@ -19,42 +19,36 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  role: z.enum(["USER", "ADMIN"]),
+  name: z.string().min(1, { message: "Name is Required!" }),
 });
 
-interface EditUserProps {
-  user: any;
+interface EditCategoryProps {
+  category: any;
   onSuccess?: () => void;
 }
 
-const EditUser = ({ user, onSuccess }: EditUserProps) => {
+const EditCategory = ({ category, onSuccess }: EditCategoryProps) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      role: user?.role || "USER",
+      name: category?.name || "",
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/users/${user.id}`, {
+      const res = await fetch(`/api/categories/${category.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -63,9 +57,9 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Failed to update role");
+      if (!res.ok) throw new Error(json.message || "Failed to update category");
 
-      toast.success("User role updated successfully!");
+      toast.success("Category updated successfully!");
       if (onSuccess) onSuccess();
       router.refresh();
     } catch (error: any) {
@@ -78,33 +72,20 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
   return (
     <SheetContent>
       <SheetHeader>
-        <SheetTitle className="mb-4">Edit User Role</SheetTitle>
+        <SheetTitle className="mb-4">Edit Category</SheetTitle>
         <SheetDescription asChild>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <FormField
                 control={form.control}
-                name="role"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="USER">User</SelectItem>
-                          <SelectItem value="ADMIN">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Input {...field} />
                     </FormControl>
-                    <FormDescription>
-                      Assign administrative privileges to this user.
-                    </FormDescription>
+                    <FormDescription>Enter category name.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -121,4 +102,4 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
   );
 };
 
-export default EditUser;
+export default EditCategory;

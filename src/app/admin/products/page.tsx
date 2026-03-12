@@ -1,58 +1,27 @@
 import { ProductService } from "@/services/product.service";
+import ProductsTable from "@/components/admin/ProductsTable";
 
 const ProductsPage = async () => {
   const { products } = await ProductService.getProducts(1, 100);
 
-  const data = products.map((p) => ({
+  // Map to format that form and table understands
+  const data = products.map((p: any) => ({
     id: p.id,
     name: p.name,
+    description: p.description || "",
+    shortDescription: p.shortDescription || "",
     price: p.price,
     stock: p.stock,
-    category: p.category?.name ?? "-",
-    image: p.images?.[0]?.url ?? "",
+    categoryId: p.categoryId,
+    category: p.category?.name ?? "T-shirts",
+    images: p.images || [],
+    sizes: (p.sizes || []).map((s: any) => s.size),
+    colors: (p.colors || []).map((c: any) => c.name),
   }));
 
   return (
     <div className="">
-      <div className="mb-8 px-4 py-2 bg-secondary rounded-md">
-        <h1 className="font-semibold">All Products</h1>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="py-3 px-4">Name</th>
-              <th className="py-3 px-4">Category</th>
-              <th className="py-3 px-4">Price</th>
-              <th className="py-3 px-4">Stock</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="text-center py-8 text-muted-foreground">
-                  Belum ada produk.
-                </td>
-              </tr>
-            ) : (
-              data.map((product) => (
-                <tr key={product.id} className="border-b hover:bg-muted/50">
-                  <td className="py-3 px-4 font-medium">{product.name}</td>
-                  <td className="py-3 px-4 text-muted-foreground">{product.category}</td>
-                  <td className="py-3 px-4">
-                    {new Intl.NumberFormat("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                      maximumFractionDigits: 0,
-                    }).format(product.price)}
-                  </td>
-                  <td className="py-3 px-4">{product.stock}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <ProductsTable initialData={data} />
     </div>
   );
 };

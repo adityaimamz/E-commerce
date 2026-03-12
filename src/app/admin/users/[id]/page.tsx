@@ -1,4 +1,5 @@
 import CardList from "@/components/admin/CardList";
+import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -21,7 +22,16 @@ import EditUser from "@/components/admin/EditUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLineChart from "@/components/admin/AppLineChart";
 
-const SingleUserPage = () => {
+const SingleUserPage = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
+  const user = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!user) {
+    return <div>User not found</div>;
+  }
+
   return (
     <div className="">
       <Breadcrumb>
@@ -35,7 +45,7 @@ const SingleUserPage = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>John Doe</BreadcrumbPage>
+            <BreadcrumbPage>{user.name || "User"}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -111,9 +121,9 @@ const SingleUserPage = () => {
             <div className="flex items-center gap-2">
               <Avatar className="size-12">
                 <AvatarImage src="https://avatars.githubusercontent.com/u/1486366" />
-                <AvatarFallback>JD</AvatarFallback>
+                <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
               </Avatar>
-              <h1 className="text-xl font-semibold">John Doe</h1>
+              <h1 className="text-xl font-semibold">{user.name || "User"}</h1>
             </div>
             <p className="text-sm text-muted-foreground">
               Lorem ipsum dolor, sit amet consectetur adipisicing elit. Vel
@@ -130,7 +140,7 @@ const SingleUserPage = () => {
                 <SheetTrigger asChild>
                   <Button>Edit User</Button>
                 </SheetTrigger>
-                <EditUser />
+                <EditUser user={user} />
               </Sheet>
             </div>
             <div className="space-y-4 mt-4">
@@ -142,11 +152,11 @@ const SingleUserPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Full name:</span>
-                <span>John Doe</span>
+                <span>{user.name || "N/A"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Email:</span>
-                <span>john.doe@gmail.com</span>
+                <span>{user.email || "N/A"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold">Phone:</span>
