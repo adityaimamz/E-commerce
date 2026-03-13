@@ -5,6 +5,8 @@ import { z } from "zod";
 
 const checkoutSchema = z.object({
   addressId: z.string().min(1, "addressId is required"),
+  shippingCost: z.number().nonnegative(),
+  courier: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -15,8 +17,8 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { addressId } = checkoutSchema.parse(body);
-    const checkoutResult = await TransactionService.checkout(session.user.id, addressId);
+    const { addressId, shippingCost, courier } = checkoutSchema.parse(body);
+    const checkoutResult = await TransactionService.checkout(session.user.id, addressId, shippingCost, courier);
     return NextResponse.json({ success: true, data: checkoutResult }, { status: 201 });
   } catch (error: any) {
     if (error?.name === "ZodError") {

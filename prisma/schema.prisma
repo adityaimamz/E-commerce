@@ -63,6 +63,7 @@ model Product {
   description String?
   price       Float
   stock       Int
+  reservedStock Int       @default(0)
   categoryId  String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -140,6 +141,8 @@ model Address {
   addressLine   String
   city          String
   province      String
+  district      String?
+  village       String?
   postalCode    String
   country       String
   isDefault     Boolean   @default(false)
@@ -154,8 +157,9 @@ model Shipment {
   id                String    @id @default(cuid())
   transactionId     String    @unique
   courier           String
-  trackingNumber    String
+  trackingNumber    String?
   shippingCost      Float
+  shipmentStatus    String    @default("PENDING")
   shippedAt         DateTime?
   estimatedDelivery DateTime?
   createdAt         DateTime  @default(now())

@@ -4,7 +4,7 @@ import { CartService } from "./cart.service";
 import { PaymentStatus, OrderStatus } from "@prisma/client";
 
 export class TransactionService {
-  static async checkout(userId: string, addressId: string) {
+  static async checkout(userId: string, addressId: string, shippingCost: number = 0, courier: string = "") {
     // 1. Get user's cart
     const cart = await CartService.getCart(userId);
 
@@ -25,16 +25,20 @@ export class TransactionService {
     }
 
     // 3. Validate stock & 4. Calculate total price
-    let totalAmount = 0;
+    let subtotal = 0;
     for (const item of cart.items) {
-      if (item.product.stock < item.quantity) {
+      const availableStock = item.product.stock - item.product.reservedStock;
+      if (availableStock < item.quantity) {
         throw new Error(`Insufficient stock for product ${item.product.name}`);
       }
-      totalAmount += item.product.price * item.quantity;
+      subtotal += item.product.price * item.quantity;
     }
 
-    // 5. Create transaction + items atomically and clear cart.
+    const totalAmount = subtotal + shippingCost;
+
+    // 5. Create transaction + items + shipment atomically and reserve stock.
     const transaction = await prisma.$transaction(async (tx) => {
+      // Create Transaction
       const order = await tx.transaction.create({
         data: {
           userId,
@@ -49,10 +53,27 @@ export class TransactionService {
               priceSnapshot: item.product.price,
             })),
           },
+          shipment: {
+            create: {
+              courier,
+              shippingCost,
+              shipmentStatus: "PENDING",
+            },
+          },
         },
       });
 
-      // Clear cart immediately after creating order snapshots.
+      // Reserve stock
+      for (const item of cart.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            reservedStock: { increment: item.quantity },
+          },
+        });
+      }
+
+      // Clear cart immediately
       await tx.cartItem.deleteMany({
         where: { cartId: cart.id },
       });
@@ -81,12 +102,20 @@ export class TransactionService {
         postal_code: address.postalCode,
         country_code: address.country,
       },
-      item_details: cart.items.map((item) => ({
-        id: item.productId,
-        price: item.product.price,
-        quantity: item.quantity,
-        name: item.product.name.substring(0, 50),
-      })),
+      item_details: [
+        ...cart.items.map((item) => ({
+          id: item.productId,
+          price: item.product.price,
+          quantity: item.quantity,
+          name: item.product.name.substring(0, 50),
+        })),
+        {
+          id: "SHIPPING_FEE",
+          price: shippingCost,
+          quantity: 1,
+          name: courier || "Shipping Fee",
+        },
+      ],
     };
 
     const snapResponse = await snap.createTransaction(parameter);
@@ -128,28 +157,41 @@ export class TransactionService {
 
       let orderStatus: OrderStatus = existing.orderStatus;
 
-      // Logic: If payment becomes PAID, automatically move order to PROCESSING and deduct stock.
+      // Logic: If payment becomes PAID, automatically move order to PROCESSING, deduct stock and clear reserved.
       if (paymentStatus === "PAID") {
         orderStatus = "PROCESSING";
         
         for (const item of existing.items) {
+          // Physical deduction of stock and reservedStock
           const result = await tx.product.updateMany({
             where: {
               id: item.productId,
               stock: { gte: item.quantity },
+              reservedStock: { gte: item.quantity },
             },
             data: {
               stock: { decrement: item.quantity },
+              reservedStock: { decrement: item.quantity },
             },
           });
 
           if (result.count === 0) {
-            throw new Error(`Insufficient stock for product ${item.productId}`);
+            // If physical stock deduction fails here, it's a critical error as it was reserved before.
+            throw new Error(`Critically low stock for product ${item.productId} during payment completion`);
           }
         }
       } else if (["CANCELLED", "EXPIRED", "FAILED"].includes(paymentStatus)) {
-        // If payment fails/cancels, move order to CANCELLED as well.
+        // If payment fails/cancels, release reservedStock and move order to CANCELLED.
         orderStatus = "CANCELLED";
+
+        for (const item of existing.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              reservedStock: { decrement: item.quantity },
+            },
+          });
+        }
       }
 
       await tx.transaction.update({

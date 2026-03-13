@@ -1,5 +1,6 @@
 "use client";
 
+import { notifyCartUpdated } from "@/lib/cart-events";
 import { DbProduct } from "@/types";
 import { ShoppingCart } from "lucide-react";
 import Image from "next/image";
@@ -11,6 +12,12 @@ const DbProductCard = ({ product }: { product: DbProduct }) => {
   const [adding, setAdding] = useState(false);
 
   const imageUrl = product.images?.[0]?.url || "/placeholder.png";
+  let cartButtonLabel = "Add to Cart";
+  if (product.stock === 0) {
+    cartButtonLabel = "Habis";
+  } else if (adding) {
+    cartButtonLabel = "...";
+  }
 
   const handleAddToCart = async () => {
     setAdding(true);
@@ -29,8 +36,10 @@ const DbProductCard = ({ product }: { product: DbProduct }) => {
         }
         return;
       }
+      notifyCartUpdated();
       toast.success("Produk ditambahkan ke keranjang");
     } catch (error) {
+      console.error("Failed to add item to cart", error);
       toast.error("Terjadi kesalahan, coba lagi");
     } finally {
       setAdding(false);
@@ -79,7 +88,7 @@ const DbProductCard = ({ product }: { product: DbProduct }) => {
             className="ring-1 ring-gray-200 shadow-lg rounded-md px-2 py-1 text-sm cursor-pointer hover:text-white hover:bg-black transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ShoppingCart className="w-4 h-4" />
-            {product.stock === 0 ? "Habis" : adding ? "..." : "Add to Cart"}
+            {cartButtonLabel}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { notifyCartUpdated } from "@/lib/cart-events";
 import { DbProduct } from "@/types";
 import { Minus, Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
@@ -16,10 +17,8 @@ const DbProductInteraction = ({ product }: { product: DbProduct }) => {
       if (quantity < product.stock) {
         setQuantity((prev) => prev + 1);
       }
-    } else {
-      if (quantity > 1) {
-        setQuantity((prev) => prev - 1);
-      }
+    } else if (quantity > 1) {
+      setQuantity((prev) => prev - 1);
     }
   };
 
@@ -41,8 +40,10 @@ const DbProductInteraction = ({ product }: { product: DbProduct }) => {
         }
         return;
       }
+      notifyCartUpdated();
       toast.success("Produk ditambahkan ke keranjang");
     } catch (error) {
+      console.error("Failed to add item to cart", error);
       toast.error("Terjadi kesalahan, coba lagi");
     } finally {
       setAdding(false);

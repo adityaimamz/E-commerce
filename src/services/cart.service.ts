@@ -4,6 +4,15 @@ import { addToCartSchema, removeFromCartSchema } from "@/lib/validators/cart.val
 
 export class CartService {
   static async getCart(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     let cart = await prisma.cart.findUnique({
       where: { userId },
       include: {
@@ -13,12 +22,10 @@ export class CartService {
       },
     });
 
-    if (!cart) {
-      cart = await prisma.cart.create({
-        data: { userId },
-        include: { items: { include: { product: true } } },
-      });
-    }
+    cart ??= await prisma.cart.create({
+      data: { userId },
+      include: { items: { include: { product: true } } },
+    });
 
     return cart;
   }
