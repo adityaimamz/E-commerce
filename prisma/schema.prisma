@@ -143,6 +143,10 @@ model Address {
   province      String
   district      String?
   village       String?
+  provinceId    String?
+  cityId        String?
+  districtId    String?
+  subDistrictId String?
   postalCode    String
   country       String
   isDefault     Boolean   @default(false)
@@ -166,4 +170,21 @@ model Shipment {
   updatedAt         DateTime  @updatedAt
 
   transaction       Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+model StoreSettings {
+  id            String   @id @default("default")
+  shopName      String   @default("My Shop")
+  phone         String?
+  address       String?
+  province      String?
+  city          String?
+  district      String?
+  village       String?
+  provinceId    String?
+  cityId        String?
+  districtId    String?
+  subDistrictId String?
+  postalCode    String?
+  originId      String?  @default("501")
+  updatedAt     DateTime @updatedAt
 }

@@ -8,12 +8,18 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, message: "provinceId is required" }, { status: 400 });
   }
 
+  const apiKey = process.env.RAJAONGKIR_API_KEY;
+  const baseUrl = process.env.RAJAONGKIR_KOMERCE_API_URL || "https://rajaongkir.komerce.id/api/v1";
+
   try {
-    const res = await fetch(`https://emsifa.github.io/api-wilayah-indonesia/api/regencies/${provinceId}.json`, {
+    const res = await fetch(`${baseUrl}/destination/city/${provinceId}`, {
+      headers: {
+        "key": apiKey || "",
+      },
       next: { revalidate: 86400 },
     });
-    const data = await res.json();
-    return NextResponse.json({ success: true, data });
+    const json = await res.json();
+    return NextResponse.json({ success: true, data: json.data });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

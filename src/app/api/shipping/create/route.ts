@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { createShipment } from "@/lib/shipping/rajaongkir-delivery";
+import { createDeliveryOrder } from "@/lib/shipping/rajaongkir-delivery";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
@@ -17,17 +17,23 @@ export async function POST(req: Request) {
        return NextResponse.json({ success: false, message: "transactionId is required" }, { status: 400 });
     }
 
-    // Example payload for RajaOngkir/Komerce Delivery API
-    const data = await createShipment({
+    const data = await createDeliveryOrder({
       ...rest,
     });
 
+    const trackingNumber =
+      data?.data?.tracking_number ||
+      data?.data?.waybill ||
+      data?.tracking_number ||
+      data?.waybill ||
+      null;
+
     // Update shipment in database
-    if (data.success && data.data?.waybill) {
+    if (trackingNumber) {
       await prisma.shipment.update({
         where: { transactionId },
         data: {
-          trackingNumber: data.data.waybill,
+          trackingNumber,
           shipmentStatus: "SHIPPED",
           shippedAt: new Date(),
         },

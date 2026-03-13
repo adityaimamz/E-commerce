@@ -13,6 +13,10 @@ type Address = {
   province: string;
   district?: string;
   village?: string;
+  provinceId?: string;
+  cityId?: string;
+  districtId?: string;
+  subDistrictId?: string;
   postalCode: string;
   country: string;
   isDefault: boolean;
@@ -31,6 +35,10 @@ type AddressForm = {
   city: string;
   district: string;
   village: string;
+  provinceId: string;
+  cityId: string;
+  districtId: string;
+  subDistrictId: string;
   postalCode: string;
   country: string;
 };
@@ -43,6 +51,10 @@ const initialForm: AddressForm = {
   city: "",
   district: "",
   village: "",
+  provinceId: "",
+  cityId: "",
+  districtId: "",
+  subDistrictId: "",
   postalCode: "",
   country: "IDN",
 };
@@ -132,7 +144,7 @@ export default function AddressPage() {
 
   const fetchVillages = async (districtId: string) => {
     try {
-      const res = await fetch(`/api/locations/villages?districtId=${districtId}`);
+      const res = await fetch(`/api/locations/sub-districts?districtId=${districtId}`);
       const json = await res.json();
       if (json.success) {
         setVillages(json.data);
@@ -198,7 +210,7 @@ export default function AddressPage() {
   };
 
   const handleProvinceChange = async (provinceId: string) => {
-    const selectedProvince = provinces.find((item) => item.id === provinceId);
+    const selectedProvince = provinces.find((item) => String(item.id) === String(provinceId));
 
     setSelectedProvinceId(provinceId);
     setSelectedCityId("");
@@ -209,9 +221,13 @@ export default function AddressPage() {
     setForm((prev) => ({
       ...prev,
       province: selectedProvince?.name || "",
+      provinceId: provinceId,
       city: "",
+      cityId: "",
       district: "",
+      districtId: "",
       village: "",
+      subDistrictId: "",
     }));
 
     if (provinceId) {
@@ -222,7 +238,7 @@ export default function AddressPage() {
   };
 
   const handleCityChange = async (cityId: string) => {
-    const selectedCity = cities.find((item) => item.id === cityId);
+    const selectedCity = cities.find((item) => String(item.id) === String(cityId));
 
     setSelectedCityId(cityId);
     setSelectedDistrictId("");
@@ -231,8 +247,11 @@ export default function AddressPage() {
     setForm((prev) => ({
       ...prev,
       city: selectedCity?.name || "",
+      cityId: cityId,
       district: "",
+      districtId: "",
       village: "",
+      subDistrictId: "",
     }));
 
     if (cityId) {
@@ -243,14 +262,16 @@ export default function AddressPage() {
   };
 
   const handleDistrictChange = async (districtId: string) => {
-    const selectedDistrict = districts.find((item) => item.id === districtId);
+    const selectedDistrict = districts.find((item) => String(item.id) === String(districtId));
 
     setSelectedDistrictId(districtId);
     setSelectedVillageId("");
     setForm((prev) => ({
       ...prev,
       district: selectedDistrict?.name || "",
+      districtId: districtId,
       village: "",
+      subDistrictId: "",
     }));
 
     if (districtId) {
@@ -261,9 +282,13 @@ export default function AddressPage() {
   };
 
   const handleVillageChange = (villageId: string) => {
-    const selectedVillage = villages.find((item) => item.id === villageId);
+    const selectedVillage = villages.find((item) => String(item.id) === String(villageId));
     setSelectedVillageId(villageId);
-    setForm((prev) => ({ ...prev, village: selectedVillage?.name || "" }));
+    setForm((prev) => ({
+      ...prev,
+      village: selectedVillage?.name || "",
+      subDistrictId: villageId,
+    }));
   };
 
   const normalize = (value: string) => value.trim().toLowerCase();
@@ -276,17 +301,23 @@ export default function AddressPage() {
       phone: address.phone,
       addressLine: address.addressLine,
       province: address.province,
+      provinceId: address.provinceId || "",
       city: address.city,
+      cityId: address.cityId || "",
       district: address.district || "",
+      districtId: address.districtId || "",
       village: address.village || "",
+      subDistrictId: address.subDistrictId || "",
       postalCode: address.postalCode,
       country: address.country,
     });
 
     const loadedProvinces = provinces.length > 0 ? provinces : await fetchProvinces();
-    const selectedProvince = loadedProvinces.find(
-      (item) => normalize(item.name) === normalize(address.province)
-    );
+    
+    // Prioritize ID match, fallback to name match
+    let selectedProvince = address.provinceId 
+      ? loadedProvinces.find(item => String(item.id) === String(address.provinceId))
+      : loadedProvinces.find(item => normalize(item.name) === normalize(address.province));
 
     if (!selectedProvince) {
       setSelectedProvinceId("");
@@ -299,11 +330,16 @@ export default function AddressPage() {
       return;
     }
 
-    setSelectedProvinceId(selectedProvince.id);
-    const loadedCities = await fetchCities(selectedProvince.id);
-    const selectedCity = loadedCities.find(
-      (item) => normalize(item.name) === normalize(address.city)
-    );
+    setSelectedProvinceId(String(selectedProvince.id));
+    setForm((prev) => ({
+      ...prev,
+      province: selectedProvince.name,
+      provinceId: String(selectedProvince.id),
+    }));
+    const loadedCities = await fetchCities(String(selectedProvince.id));
+    const selectedCity = address.cityId
+      ? loadedCities.find(item => String(item.id) === String(address.cityId))
+      : loadedCities.find(item => normalize(item.name) === normalize(address.city));
 
     if (!selectedCity) {
       setSelectedCityId("");
@@ -314,11 +350,16 @@ export default function AddressPage() {
       return;
     }
 
-    setSelectedCityId(selectedCity.id);
-    const loadedDistricts = await fetchDistricts(selectedCity.id);
-    const selectedDistrict = loadedDistricts.find(
-      (item) => normalize(item.name) === normalize(address.district || "")
-    );
+    setSelectedCityId(String(selectedCity.id));
+    setForm((prev) => ({
+      ...prev,
+      city: selectedCity.name,
+      cityId: String(selectedCity.id),
+    }));
+    const loadedDistricts = await fetchDistricts(String(selectedCity.id));
+    const selectedDistrict = address.districtId
+      ? loadedDistricts.find(item => String(item.id) === String(address.districtId))
+      : loadedDistricts.find(item => normalize(item.name) === normalize(address.district || ""));
 
     if (!selectedDistrict) {
       setSelectedDistrictId("");
@@ -327,19 +368,24 @@ export default function AddressPage() {
       return;
     }
 
-    setSelectedDistrictId(selectedDistrict.id);
-    const loadedVillages = await fetchVillages(selectedDistrict.id);
-    const selectedVillage = loadedVillages.find(
-      (item) => normalize(item.name) === normalize(address.village || "")
-    );
+    setSelectedDistrictId(String(selectedDistrict.id));
+    setForm((prev) => ({
+      ...prev,
+      district: selectedDistrict.name,
+      districtId: String(selectedDistrict.id),
+    }));
+    const loadedVillages = await fetchVillages(String(selectedDistrict.id));
+    const selectedVillage = address.subDistrictId
+      ? loadedVillages.find(item => String(item.id) === String(address.subDistrictId))
+      : loadedVillages.find(item => normalize(item.name) === normalize(address.village || ""));
 
     if (!selectedVillage) {
       setSelectedVillageId("");
       return;
     }
 
-    setSelectedVillageId(selectedVillage.id);
-    setForm((prev) => ({ ...prev, village: selectedVillage.name }));
+    setSelectedVillageId(String(selectedVillage.id));
+    setForm((prev) => ({ ...prev, village: selectedVillage.name, subDistrictId: String(selectedVillage.id) }));
   };
 
   const handleCancelEdit = () => {

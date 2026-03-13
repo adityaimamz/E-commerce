@@ -38,6 +38,10 @@ type Address = {
   province: string;
   district?: string;
   village?: string;
+  provinceId?: string;
+  cityId?: string;
+  districtId?: string;
+  subDistrictId?: string;
   postalCode: string;
   country: string;
   isDefault: boolean;
@@ -46,7 +50,8 @@ type Address = {
 type ShippingCostOption = {
   service: string;
   description: string;
-  cost: Array<{ value: number; etd: string; note: string }>;
+  cost?: number | Array<{ value?: number; etd?: string; note?: string }>;
+  etd?: string;
 };
 
 const COURIERS = [
@@ -132,8 +137,7 @@ const CartPage = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            origin: "501", // Default origin city ID (e.g. Jakarta Barat)
-            destination: selectedAddress.city, // Should be city ID, but for now we pass name. Needs mapping in production.
+            destination: selectedAddress.districtId || selectedAddress.cityId || selectedAddress.district || selectedAddress.city,
             weight: totalWeight,
             courier: selectedCourier,
           }),
@@ -147,6 +151,7 @@ const CartPage = () => {
           toast.error("Gagal mendapatkan biaya kirim");
         }
       } catch (error) {
+        console.error("Failed to fetch shipping cost:", error);
         toast.error("Terjadi kesalahan saat mengecek ongkir");
       } finally {
         setLoadingOptions(false);
@@ -393,28 +398,43 @@ const CartPage = () => {
               <div className="flex flex-col gap-3">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Layanan Tersedia</label>
                 <div className="grid gap-2">
-                  {shippingOptions.map((opt) => (
-                    <button
-                      key={opt.service}
-                      onClick={() => setSelectedOption({ 
-                        service: opt.service, 
-                        cost: opt.cost[0].value, 
-                        etd: opt.cost[0].etd 
-                      })}
-                      className={`flex items-center justify-between p-4 border rounded-xl text-left transition-all ${
-                        selectedOption?.service === opt.service 
-                        ? "border-black bg-gray-50 ring-1 ring-black" 
-                        : "border-gray-200 hover:border-gray-400"
-                      }`}
-                    >
-                      <div>
-                        <p className="font-bold text-sm">{opt.service}</p>
-                        <p className="text-xs text-gray-500">{opt.description}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">Estimasi: {opt.cost[0].etd} hari</p>
-                      </div>
-                      <p className="font-bold text-sm">{formatRupiah(opt.cost[0].value)}</p>
-                    </button>
-                  ))}
+                  {shippingOptions.map((opt, index) => {
+                    const costValue = typeof opt.cost === "number" 
+                      ? opt.cost 
+                      : Number(opt.cost?.[0]?.value ?? 0);
+                    
+                    const etdValue = opt.etd || (Array.isArray(opt.cost) ? opt.cost[0]?.etd : "") || "-";
+                    const service = opt.service || "Layanan";
+                    const description = opt.description || "";
+                    const isDisabled = Number.isNaN(costValue) || costValue <= 0;
+
+                    return (
+                      <button
+                        key={`${service}-${index}`}
+                        onClick={() => {
+                          if (isDisabled) return;
+                          setSelectedOption({
+                            service,
+                            cost: costValue,
+                            etd: etdValue,
+                          });
+                        }}
+                        disabled={isDisabled}
+                        className={`flex items-center justify-between p-4 border rounded-xl text-left transition-all ${
+                          selectedOption?.service === service
+                            ? "border-black bg-gray-50 ring-1 ring-black"
+                            : "border-gray-200 hover:border-gray-400"
+                        } ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                      >
+                        <div>
+                          <p className="font-bold text-sm">{service}</p>
+                          <p className="text-xs text-gray-500">{description}</p>
+                          <p className="text-[10px] text-gray-400 mt-1">Estimasi: {etdValue} hari</p>
+                        </div>
+                        <p className="font-bold text-sm">{costValue > 0 ? formatRupiah(costValue) : "Tidak tersedia"}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

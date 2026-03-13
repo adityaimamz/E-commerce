@@ -4,32 +4,25 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const updateTransactionStatusSchema = z.object({
-  status: z.enum([
-    "PENDING_PAYMENT",
-    "PAID",
+  orderStatus: z.enum([
+    "PENDING",
     "PROCESSING",
     "PACKING",
     "SHIPPED",
     "DELIVERED",
+    "COMPLETED",
+    "CANCELLED",
+    "RETURNED",
+  ]).optional(),
+  paymentStatus: z.enum([
+    "PENDING",
+    "PAID",
     "FAILED",
     "CANCELLED",
     "EXPIRED",
     "REFUNDED",
-  ]),
+  ]).optional(),
 });
-
-const allowedTransitions: Record<string, string[]> = {
-  PENDING_PAYMENT: ["PAID", "CANCELLED", "EXPIRED", "FAILED"],
-  PAID: ["PROCESSING", "REFUNDED"],
-  PROCESSING: ["PACKING"],
-  PACKING: ["SHIPPED"],
-  SHIPPED: ["DELIVERED"],
-  DELIVERED: [],
-  FAILED: [],
-  CANCELLED: [],
-  EXPIRED: [],
-  REFUNDED: [],
-};
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -40,24 +33,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const { id } = await params;
     const body = await req.json();
-    const { status } = updateTransactionStatusSchema.parse(body);
+    const { orderStatus, paymentStatus } = updateTransactionStatusSchema.parse(body);
 
     const current = await prisma.transaction.findUnique({
       where: { id },
-      select: { status: true },
     });
 
     if (!current) {
       return NextResponse.json({ success: false, message: "Transaction not found" }, { status: 404 });
     }
 
-    if (current.status !== status && !allowedTransitions[current.status]?.includes(status)) {
-      return NextResponse.json({ success: false, message: "Invalid status transition" }, { status: 400 });
-    }
-
     const transaction = await prisma.transaction.update({
       where: { id },
-      data: { status },
+      data: { 
+        ...(orderStatus && { orderStatus }),
+        ...(paymentStatus && { paymentStatus }),
+      },
       include: {
         shipment: true,
         address: true,

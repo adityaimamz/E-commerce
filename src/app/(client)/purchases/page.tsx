@@ -3,6 +3,7 @@ import { TransactionService } from "@/services/transaction.service";
 import Image from "next/image";
 import Link from "next/link";
 import { Package } from "lucide-react";
+import TrackOrderButton from "@/components/client/TrackOrderButton";
 
 export default async function PurchasesPage() {
   const session = await auth();
@@ -141,7 +142,13 @@ export default async function PurchasesPage() {
                   ))}
                 </div>
                 
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex justify-end gap-3">
+                  {["SHIPPED", "DELIVERED", "COMPLETED"].includes(tx.orderStatus) && tx.shipment?.trackingNumber && (
+                    <TrackOrderButton 
+                      transactionId={tx.id} 
+                      trackingNumber={tx.shipment.trackingNumber} 
+                    />
+                  )}
                   {tx.paymentStatus === "PENDING" && tx.paymentUrl && (
                     <a href={tx.paymentUrl} target="_blank" rel="noopener noreferrer" className="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 transition-colors text-sm font-medium">
                       Bayar Sekarang

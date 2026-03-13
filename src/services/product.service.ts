@@ -14,18 +14,33 @@ export class ProductService {
       where.categoryId = categoryId;
     }
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip,
-        take: limit,
-        include: { category: true, images: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.product.count({ where }),
-    ]);
+    try {
+      const [products, total] = await Promise.all([
+        prisma.product.findMany({
+          where,
+          skip,
+          take: limit,
+          include: { category: true, images: true },
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.product.count({ where }),
+      ]);
 
-    return { products, total, page, limit, totalPages: Math.ceil(total / limit) };
+      return { products, total, page, limit, totalPages: Math.ceil(total / limit) };
+    } catch (error: any) {
+      const message = String(error?.message || "");
+      const isConnectivityError =
+        error?.code === "P1001" ||
+        message.includes("Can't reach database server") ||
+        message.includes("Can\u2019t reach database server");
+
+      if (!isConnectivityError) {
+        throw error;
+      }
+
+      console.error("[ProductService.getProducts] Database connection failed:", message);
+      return { products: [], total: 0, page, limit, totalPages: 0 };
+    }
   }
 
   static async getProductById(id: string) {

@@ -2,17 +2,17 @@ import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const cityId = searchParams.get("cityId");
+  const districtId = searchParams.get("districtId");
 
-  if (!cityId) {
-    return NextResponse.json({ success: false, message: "cityId is required" }, { status: 400 });
+  if (!districtId) {
+    return NextResponse.json({ success: false, message: "districtId is required" }, { status: 400 });
   }
 
   const apiKey = process.env.RAJAONGKIR_API_KEY;
   const baseUrl = process.env.RAJAONGKIR_KOMERCE_API_URL || "https://rajaongkir.komerce.id/api/v1";
 
   try {
-    const res = await fetch(`${baseUrl}/destination/district/${cityId}`, {
+    const res = await fetch(`${baseUrl}/destination/sub-district/${districtId}`, {
       headers: {
         "key": apiKey || "",
       },
