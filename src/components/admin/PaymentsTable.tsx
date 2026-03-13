@@ -14,25 +14,31 @@ import { toast } from "react-toastify";
 const getStatusColor = (status: string) => {
   switch (status) {
     case "PAID": return "bg-green-100 text-green-700";
-    case "PENDING": return "bg-yellow-100 text-yellow-700";
+    case "PENDING_PAYMENT": return "bg-yellow-100 text-yellow-700";
+    case "PROCESSING": return "bg-cyan-100 text-cyan-700";
     case "CANCELLED": return "bg-red-100 text-red-700";
+    case "FAILED": return "bg-red-100 text-red-700";
     case "EXPIRED": return "bg-gray-100 text-gray-700";
     case "PACKING": return "bg-blue-100 text-blue-700";
     case "SHIPPED": return "bg-purple-100 text-purple-700";
     case "DELIVERED": return "bg-emerald-100 text-emerald-700";
+    case "REFUNDED": return "bg-orange-100 text-orange-700";
     default: return "bg-gray-100 text-gray-700";
   }
 };
 
 const getStatusText = (status: string) => {
   switch (status) {
-    case "PAID": return "Perlu Dikemas"; // Already paid, waiting to be packed
-    case "PENDING": return "Perlu Dibayar"; // Waiting for payment
+    case "PENDING_PAYMENT": return "Perlu Dibayar";
+    case "PAID": return "Sudah Dibayar";
+    case "PROCESSING": return "Sedang Diproses";
     case "CANCELLED": return "Dibatalkan";
+    case "FAILED": return "Gagal";
     case "EXPIRED": return "Kedaluwarsa";
-    case "PACKING": return "Sedang Dikemas"; // Packing
-    case "SHIPPED": return "Sedang Dikirim"; // Delivery
-    case "DELIVERED": return "Diterima / Selesai"; // Done
+    case "PACKING": return "Sedang Dikemas";
+    case "SHIPPED": return "Sedang Dikirim";
+    case "DELIVERED": return "Diterima / Selesai";
+    case "REFUNDED": return "Refund";
     default: return status;
   }
 };
@@ -136,7 +142,7 @@ const PaymentsTable = ({ initialData }: PaymentsTableProps) => {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        {tx.status === "PENDING" && (
+                        {tx.status === "PENDING_PAYMENT" && (
                           <DropdownMenuItem 
                             className="cursor-pointer text-xs"
                             onClick={() => handleStatusUpdate(tx.id, "PAID")}
@@ -144,24 +150,38 @@ const PaymentsTable = ({ initialData }: PaymentsTableProps) => {
                             Setujui Pembayaran (Paid)
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem 
-                          className="cursor-pointer text-xs"
-                          onClick={() => handleStatusUpdate(tx.id, "PACKING")}
-                        >
-                          Tandai "Sedang Dikemas" (Packing)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="cursor-pointer text-xs"
-                          onClick={() => handleStatusUpdate(tx.id, "SHIPPED")}
-                        >
-                          Tandai "Sedang Dikirim" (Shipped)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="cursor-pointer text-xs focus:text-emerald-600 text-emerald-600"
-                          onClick={() => handleStatusUpdate(tx.id, "DELIVERED")}
-                        >
-                          Tandai "Selesai" (Delivered)
-                        </DropdownMenuItem>
+                        {tx.status === "PAID" && (
+                          <DropdownMenuItem
+                            className="cursor-pointer text-xs"
+                            onClick={() => handleStatusUpdate(tx.id, "PROCESSING")}
+                          >
+                            Tandai "Diproses" (Processing)
+                          </DropdownMenuItem>
+                        )}
+                        {tx.status === "PROCESSING" && (
+                          <DropdownMenuItem
+                            className="cursor-pointer text-xs"
+                            onClick={() => handleStatusUpdate(tx.id, "PACKING")}
+                          >
+                            Tandai "Sedang Dikemas" (Packing)
+                          </DropdownMenuItem>
+                        )}
+                        {tx.status === "PACKING" && (
+                          <DropdownMenuItem
+                            className="cursor-pointer text-xs"
+                            onClick={() => handleStatusUpdate(tx.id, "SHIPPED")}
+                          >
+                            Tandai "Sedang Dikirim" (Shipped)
+                          </DropdownMenuItem>
+                        )}
+                        {tx.status === "SHIPPED" && (
+                          <DropdownMenuItem
+                            className="cursor-pointer text-xs focus:text-emerald-600 text-emerald-600"
+                            onClick={() => handleStatusUpdate(tx.id, "DELIVERED")}
+                          >
+                            Tandai "Selesai" (Delivered)
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem 
                           className="cursor-pointer text-xs focus:text-red-600 text-red-600"
                           onClick={() => handleStatusUpdate(tx.id, "CANCELLED")}

@@ -3,6 +3,7 @@
 import { ArrowRight, Loader2, ShoppingCart, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
@@ -27,8 +28,23 @@ type Cart = {
   items: CartItem[];
 };
 
+type Address = {
+  id: string;
+  recipientName: string;
+  phone: string;
+  addressLine: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+};
+
 const CartPage = () => {
+  const router = useRouter();
   const [cart, setCart] = useState<Cart | null>(null);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -43,6 +59,7 @@ const CartPage = () => {
       const data = await res.json();
       if (data.success) setCart(data.data);
     } catch (error) {
+      console.error(error);
       toast.error("Gagal memuat keranjang");
     } finally {
       setLoading(false);
@@ -51,6 +68,32 @@ const CartPage = () => {
 
   useEffect(() => {
     fetchCart();
+  }, []);
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const res = await fetch("/api/addresses");
+        if (!res.ok) {
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          return;
+        }
+
+        const loadedAddresses: Address[] = data.data;
+        setAddresses(loadedAddresses);
+
+        const defaultAddress = loadedAddresses.find((address) => address.isDefault);
+        setSelectedAddressId(defaultAddress?.id || loadedAddresses[0]?.id || "");
+      } catch {
+        // Keep checkout state unchanged when address API fails.
+      }
+    };
+
+    fetchAddresses();
   }, []);
 
   const handleRemove = async (productId: string) => {
@@ -78,7 +121,16 @@ const CartPage = () => {
   const handleCheckout = async () => {
     setCheckoutLoading(true);
     try {
-      const res = await fetch("/api/checkout", { method: "POST" });
+      if (!selectedAddressId) {
+        toast.error("Pilih alamat pengiriman terlebih dahulu");
+        return;
+      }
+
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ addressId: selectedAddressId }),
+      });
       const data = await res.json();
 
       if (res.status === 401) {
@@ -91,18 +143,35 @@ const CartPage = () => {
         return;
       }
 
-      const { snapToken } = data.data;
+      const { snapToken, transactionId } = data.data;
+
+      const syncTransactionStatus = async () => {
+        try {
+          await fetch(`/api/transactions/${transactionId}/sync`, {
+            method: "POST",
+          });
+          router.push("/purchases");
+          router.refresh();
+        } catch {
+          // Keep UX flowing even if sync request fails.
+          router.push("/purchases");
+        }
+      };
 
       // Load Midtrans Snap dan tampilkan popup pembayaran
-      if (typeof window !== "undefined" && (window as any).snap) {
-        (window as any).snap.pay(snapToken, {
+      if (globalThis.window && (globalThis as any).window.snap) {
+        (globalThis as any).window.snap.pay(snapToken, {
           onSuccess: () => {
             toast.success("Pembayaran berhasil!");
             fetchCart();
+            syncTransactionStatus();
           },
           onPending: () => toast.info("Menunggu pembayaran..."),
           onError: () => toast.error("Pembayaran gagal"),
-          onClose: () => toast.info("Popup pembayaran ditutup"),
+          onClose: () => {
+            toast.info("Popup pembayaran ditutup");
+            syncTransactionStatus();
+          },
         });
       } else {
         toast.error("Midtrans Snap tidak tersedia. Pastikan MIDTRANS_CLIENT_KEY sudah dikonfigurasi.");
@@ -206,6 +275,38 @@ const CartPage = () => {
         {/* ORDER SUMMARY */}
         <div className="w-full lg:w-5/12 shadow-lg border border-gray-100 p-8 rounded-lg flex flex-col gap-6 h-max">
           <h2 className="font-semibold">Ringkasan Pesanan</h2>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="shipping-address" className="text-xs font-medium text-gray-600">Alamat Pengiriman</label>
+            {addresses.length > 0 ? (
+              <select
+                id="shipping-address"
+                value={selectedAddressId}
+                onChange={(event) => setSelectedAddressId(event.target.value)}
+                className="border border-gray-200 rounded-md p-2 text-sm"
+              >
+                {addresses.map((address) => (
+                  <option key={address.id} value={address.id}>
+                    {`${address.recipientName} - ${address.addressLine}, ${address.city}`}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex flex-col gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-xs text-amber-700 font-medium">
+                  Belum ada alamat pengiriman.
+                </p>
+                <p className="text-xs text-amber-600">
+                  Tambahkan alamat pengiriman terlebih dahulu sebelum checkout.
+                </p>
+                <Link
+                  href="/settings/address"
+                  className="text-xs text-amber-700 font-semibold underline hover:text-amber-900 transition-colors"
+                >
+                  + Tambah Alamat Sekarang →
+                </Link>
+              </div>
+            )}
+          </div>
           <div className="flex flex-col gap-3">
             {cart.items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
@@ -222,7 +323,7 @@ const CartPage = () => {
 
           <button
             onClick={handleCheckout}
-            disabled={checkoutLoading}
+            disabled={checkoutLoading || addresses.length === 0}
             className="w-full bg-gray-800 hover:bg-gray-900 transition-all text-white p-3 rounded-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {checkoutLoading ? (

@@ -29,6 +29,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, message: "Webhook processed" });
   } catch (error) {
+    console.error("[MIDTRANS_WEBHOOK_ERROR]", error);
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }

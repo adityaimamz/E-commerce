@@ -24,7 +24,11 @@ export default async function PurchasesPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PAID": return "bg-green-100 text-green-700 border-green-200";
-      case "PENDING": return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "PENDING_PAYMENT": return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "PROCESSING": return "bg-sky-100 text-sky-700 border-sky-200";
+      case "PACKING": return "bg-blue-100 text-blue-700 border-blue-200";
+      case "SHIPPED": return "bg-purple-100 text-purple-700 border-purple-200";
+      case "DELIVERED": return "bg-emerald-100 text-emerald-700 border-emerald-200";
       case "CANCELLED": return "bg-red-100 text-red-700 border-red-200";
       case "EXPIRED": return "bg-gray-100 text-gray-700 border-gray-200";
       default: return "bg-gray-100 text-gray-700 border-gray-200";
@@ -33,10 +37,16 @@ export default async function PurchasesPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "PAID": return "Berhasil";
-      case "PENDING": return "Menunggu Pembayaran";
+      case "PENDING_PAYMENT": return "Menunggu Pembayaran";
+      case "PAID": return "Sudah Dibayar";
+      case "PROCESSING": return "Diproses";
+      case "PACKING": return "Sedang Dikemas";
+      case "SHIPPED": return "Sedang Dikirim";
+      case "DELIVERED": return "Diterima / Selesai";
       case "CANCELLED": return "Dibatalkan";
       case "EXPIRED": return "Kedaluwarsa";
+      case "FAILED": return "Gagal";
+      case "REFUNDED": return "Refund";
       default: return status;
     }
   };
@@ -94,14 +104,14 @@ export default async function PurchasesPage() {
                       </div>
                       <div className="flex flex-col flex-1">
                         <h4 className="font-medium text-gray-800 line-clamp-1">{item.product.name}</h4>
-                        <p className="text-sm text-gray-500 mt-1">{item.quantity} barang x Rp {item.price.toLocaleString("id-ID")}</p>
+                        <p className="text-sm text-gray-500 mt-1">{item.quantity} barang x Rp {item.priceSnapshot.toLocaleString("id-ID")}</p>
                       </div>
                     </div>
                   ))}
                 </div>
                 
                 <div className="mt-6 flex justify-end">
-                  {tx.status === "PENDING" && tx.paymentUrl && (
+                  {tx.status === "PENDING_PAYMENT" && tx.paymentUrl && (
                     <a href={tx.paymentUrl} target="_blank" rel="noopener noreferrer" className="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 transition-colors text-sm font-medium">
                       Bayar Sekarang
                     </a>

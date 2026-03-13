@@ -13,14 +13,16 @@ enum Role {
 }
 
 enum TransactionStatus {
-  PENDING
+  PENDING_PAYMENT
   PAID
+  PROCESSING
   PACKING
   SHIPPED
   DELIVERED
   FAILED
   CANCELLED
   EXPIRED
+  REFUNDED
 }
 
 model User {
@@ -34,6 +36,7 @@ model User {
   
   transactions  Transaction[]
   carts         Cart[]
+  addresses     Address[]
 }
 
 model Category {
@@ -96,15 +99,18 @@ model CartItem {
 model Transaction {
   id            String    @id @default(cuid())
   userId        String
+  addressId     String
   totalAmount   Float
-  status        TransactionStatus @default(PENDING)
+  status        TransactionStatus @default(PENDING_PAYMENT)
   snapToken     String?
   paymentUrl    String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
   user          User      @relation(fields: [userId], references: [id])
+  address       Address   @relation(fields: [addressId], references: [id])
   items         TransactionItem[]
+  shipment      Shipment?
 }
 
 model TransactionItem {
@@ -112,8 +118,40 @@ model TransactionItem {
   transactionId String
   productId     String
   quantity      Int
-  price         Float
+  priceSnapshot Float
   
   transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   product       Product      @relation(fields: [productId], references: [id])
+}
+
+model Address {
+  id            String    @id @default(cuid())
+  userId        String
+  recipientName String
+  phone         String
+  addressLine   String
+  city          String
+  province      String
+  postalCode    String
+  country       String
+  isDefault     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+}
+
+model Shipment {
+  id                String    @id @default(cuid())
+  transactionId     String    @unique
+  courier           String
+  trackingNumber    String
+  shippingCost      Float
+  shippedAt         DateTime?
+  estimatedDelivery DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  transaction       Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 }

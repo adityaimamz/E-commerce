@@ -31,17 +31,14 @@ const allowedTransitions: Record<string, string[]> = {
   REFUNDED: [],
 };
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
     const session = await auth();
-    if (session?.user?.role !== "ADMIN") {
-      return new NextResponse("Unauthorized", { status: 401 });
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     const { status } = updateTransactionStatusSchema.parse(body);
 
@@ -51,28 +48,28 @@ export async function PATCH(
     });
 
     if (!current) {
-      return new NextResponse("Transaction not found", { status: 404 });
+      return NextResponse.json({ success: false, message: "Transaction not found" }, { status: 404 });
     }
 
     if (current.status !== status && !allowedTransitions[current.status]?.includes(status)) {
-      return new NextResponse("Invalid status transition", { status: 400 });
+      return NextResponse.json({ success: false, message: "Invalid status transition" }, { status: 400 });
     }
 
     const transaction = await prisma.transaction.update({
-      where: {
-        id: id,
-      },
-      data: {
-        status,
+      where: { id },
+      data: { status },
+      include: {
+        shipment: true,
+        address: true,
       },
     });
 
-    return NextResponse.json(transaction);
-  } catch (error) {
-    console.error("[TRANSACTION_PATCH]", error);
+    return NextResponse.json({ success: true, data: transaction });
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return new NextResponse("Invalid request data", { status: 400 });
+      return NextResponse.json({ success: false, message: "Invalid request data" }, { status: 400 });
     }
-    return new NextResponse("Internal server error", { status: 500 });
+
+    return NextResponse.json({ success: false, message: error.message || "Internal server error" }, { status: 500 });
   }
 }
