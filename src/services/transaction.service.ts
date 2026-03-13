@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { snap } from "@/lib/midtrans";
 import { CartService } from "./cart.service";
-import { TransactionStatus } from "@prisma/client";
+import { PaymentStatus, OrderStatus } from "@prisma/client";
 
 export class TransactionService {
   static async checkout(userId: string, addressId: string) {
@@ -39,7 +39,8 @@ export class TransactionService {
         data: {
           userId,
           addressId,
-          status: "PENDING_PAYMENT",
+          paymentStatus: "PENDING",
+          orderStatus: "PENDING",
           totalAmount,
           items: {
             create: cart.items.map((item) => ({
@@ -103,7 +104,7 @@ export class TransactionService {
   }
 
   static async updateTransactionStatus(orderId: string, transactionStatus: string, fraudStatus: string) {
-    const mappedStatus = this.mapMidtransStatus(transactionStatus, fraudStatus);
+    const paymentStatus = this.mapMidtransStatus(transactionStatus, fraudStatus);
 
     return prisma.$transaction(async (tx) => {
       const existing = await tx.transaction.findUnique({
@@ -115,16 +116,22 @@ export class TransactionService {
         throw new Error("Transaction not found");
       }
 
-      // Idempotency and monotonic transition guard for payment webhook updates.
-      if (existing.status !== "PENDING_PAYMENT") {
-        return existing.status;
+      // Idempotency check: if payment is already processed, skip.
+      if (existing.paymentStatus !== "PENDING") {
+        return { paymentStatus: existing.paymentStatus, orderStatus: existing.orderStatus };
       }
 
-      if (mappedStatus === "PENDING_PAYMENT") {
-        return existing.status;
+      // If status hasn't changed from PENDING, just return current.
+      if (paymentStatus === "PENDING") {
+        return { paymentStatus: "PENDING", orderStatus: "PENDING" };
       }
 
-      if (mappedStatus === "PAID") {
+      let orderStatus: OrderStatus = existing.orderStatus;
+
+      // Logic: If payment becomes PAID, automatically move order to PROCESSING and deduct stock.
+      if (paymentStatus === "PAID") {
+        orderStatus = "PROCESSING";
+        
         for (const item of existing.items) {
           const result = await tx.product.updateMany({
             where: {
@@ -140,21 +147,27 @@ export class TransactionService {
             throw new Error(`Insufficient stock for product ${item.productId}`);
           }
         }
+      } else if (["CANCELLED", "EXPIRED", "FAILED"].includes(paymentStatus)) {
+        // If payment fails/cancels, move order to CANCELLED as well.
+        orderStatus = "CANCELLED";
       }
 
       await tx.transaction.update({
         where: { id: orderId },
-        data: { status: mappedStatus },
+        data: { 
+          paymentStatus,
+          orderStatus
+        },
       });
 
-      return mappedStatus;
+      return { paymentStatus, orderStatus };
     });
   }
 
-  private static mapMidtransStatus(transactionStatus: string, fraudStatus: string): TransactionStatus {
+  private static mapMidtransStatus(transactionStatus: string, fraudStatus: string): PaymentStatus {
     if (transactionStatus === "capture") {
       if (fraudStatus === "challenge") {
-        return "PENDING_PAYMENT";
+        return "PENDING";
       }
       if (fraudStatus === "accept") {
         return "PAID";
@@ -166,7 +179,7 @@ export class TransactionService {
     }
 
     if (transactionStatus === "pending") {
-      return "PENDING_PAYMENT";
+      return "PENDING";
     }
 
     if (transactionStatus === "cancel") {

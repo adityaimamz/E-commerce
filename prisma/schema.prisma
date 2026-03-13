@@ -12,17 +12,24 @@ enum Role {
   USER
 }
 
-enum TransactionStatus {
-  PENDING_PAYMENT
+enum PaymentStatus {
+  PENDING
   PAID
-  PROCESSING
-  PACKING
-  SHIPPED
-  DELIVERED
   FAILED
   CANCELLED
   EXPIRED
   REFUNDED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  PACKING
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  RETURNED
 }
 
 model User {
@@ -101,7 +108,8 @@ model Transaction {
   userId        String
   addressId     String
   totalAmount   Float
-  status        TransactionStatus @default(PENDING_PAYMENT)
+  paymentStatus PaymentStatus @default(PENDING)
+  orderStatus   OrderStatus   @default(PENDING)
   snapToken     String?
   paymentUrl    String?
   createdAt     DateTime  @default(now())

@@ -3,32 +3,27 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
-const updateTransactionStatusSchema = z.object({
+const updateOrderStatusSchema = z.object({
   status: z.enum([
-    "PENDING_PAYMENT",
-    "PAID",
     "PROCESSING",
     "PACKING",
     "SHIPPED",
     "DELIVERED",
-    "FAILED",
+    "COMPLETED",
     "CANCELLED",
-    "EXPIRED",
-    "REFUNDED",
+    "RETURNED",
   ]),
 });
 
 const allowedTransitions: Record<string, string[]> = {
-  PENDING_PAYMENT: ["PAID", "CANCELLED", "EXPIRED", "FAILED"],
-  PAID: ["PROCESSING", "REFUNDED"],
-  PROCESSING: ["PACKING"],
-  PACKING: ["SHIPPED"],
+  PENDING: ["PROCESSING", "CANCELLED"],
+  PROCESSING: ["PACKING", "CANCELLED"],
+  PACKING: ["SHIPPED", "CANCELLED"],
   SHIPPED: ["DELIVERED"],
-  DELIVERED: [],
-  FAILED: [],
+  DELIVERED: ["COMPLETED"],
+  COMPLETED: [],
   CANCELLED: [],
-  EXPIRED: [],
-  REFUNDED: [],
+  RETURNED: [],
 };
 
 export async function PATCH(
@@ -43,18 +38,18 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { status } = updateTransactionStatusSchema.parse(body);
+    const { status } = updateOrderStatusSchema.parse(body);
 
     const current = await prisma.transaction.findUnique({
       where: { id },
-      select: { status: true },
+      select: { orderStatus: true },
     });
 
     if (!current) {
       return new NextResponse("Transaction not found", { status: 404 });
     }
 
-    if (current.status !== status && !allowedTransitions[current.status]?.includes(status)) {
+    if (current.orderStatus !== status && !allowedTransitions[current.orderStatus]?.includes(status)) {
       return new NextResponse("Invalid status transition", { status: 400 });
     }
 
@@ -63,7 +58,7 @@ export async function PATCH(
         id: id,
       },
       data: {
-        status,
+        orderStatus: status,
       },
     });
 

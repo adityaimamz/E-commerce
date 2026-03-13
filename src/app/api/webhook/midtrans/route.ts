@@ -25,9 +25,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "Invalid signature" }, { status: 403 });
     }
 
-    await TransactionService.updateTransactionStatus(order_id, transaction_status, fraud_status || "");
+    const result = await TransactionService.updateTransactionStatus(order_id, transaction_status, fraud_status || "");
+    const { paymentStatus } = result as { paymentStatus: string };
 
-    return NextResponse.json({ success: true, message: "Webhook processed" });
+    return NextResponse.json({ success: true, message: `Webhook processed: ${paymentStatus}` });
   } catch (error) {
     console.error("[MIDTRANS_WEBHOOK_ERROR]", error);
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });

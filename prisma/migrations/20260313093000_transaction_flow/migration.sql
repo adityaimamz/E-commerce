@@ -1,13 +1,6 @@
--- Normalize and extend transaction status lifecycle
-ALTER TYPE "TransactionStatus" RENAME VALUE 'PENDING' TO 'PENDING_PAYMENT';
-ALTER TYPE "TransactionStatus" ADD VALUE IF NOT EXISTS 'PROCESSING';
-ALTER TYPE "TransactionStatus" ADD VALUE IF NOT EXISTS 'PACKING';
-ALTER TYPE "TransactionStatus" ADD VALUE IF NOT EXISTS 'SHIPPED';
-ALTER TYPE "TransactionStatus" ADD VALUE IF NOT EXISTS 'DELIVERED';
-ALTER TYPE "TransactionStatus" ADD VALUE IF NOT EXISTS 'REFUNDED';
-
-ALTER TABLE "Transaction"
-  ALTER COLUMN "status" SET DEFAULT 'PENDING_PAYMENT';
+-- This migration runs after `20260313032852_separate_payment_order_status`,
+-- where Transaction.status / TransactionStatus were replaced with
+-- paymentStatus + orderStatus enums.
 
 -- Add user shipping addresses
 CREATE TABLE IF NOT EXISTS "Address" (

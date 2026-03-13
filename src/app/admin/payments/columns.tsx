@@ -21,7 +21,8 @@ export type Payment = {
   fullName: string;
   userId: string;
   email: string;
-  status: "pending" | "processing" | "success" | "failed";
+  paymentStatus: string;
+  orderStatus: string;
 };
 
 export const columns: ColumnDef<Payment>[] = [
@@ -62,21 +63,42 @@ export const columns: ColumnDef<Payment>[] = [
     },
   },
   {
-    accessorKey: "status",
-    header: "Status",
+    accessorKey: "paymentStatus",
+    header: "Payment",
     cell: ({ row }) => {
-      const status = row.getValue("status");
+      const status = row.getValue("paymentStatus") as string;
 
       return (
         <div
           className={cn(
-            `p-1 rounded-md w-max text-xs`,
-            status === "pending" && "bg-yellow-500/40",
-            status === "success" && "bg-green-500/40",
-            status === "failed" && "bg-red-500/40"
+            `px-2 py-0.5 rounded-full w-max text-[10px] font-bold border`,
+            status === "PAID" && "bg-green-100 text-green-700 border-green-200",
+            status === "PENDING" && "bg-yellow-100 text-yellow-700 border-yellow-200",
+            (status === "FAILED" || status === "CANCELLED" || status === "EXPIRED") && "bg-red-100 text-red-700 border-red-200"
           )}
         >
-          {status as string}
+          {status}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "orderStatus",
+    header: "Order",
+    cell: ({ row }) => {
+      const status = row.getValue("orderStatus") as string;
+
+      return (
+        <div
+          className={cn(
+            `px-2 py-0.5 rounded-full w-max text-[10px] font-bold border`,
+            status === "DELIVERED" && "bg-emerald-100 text-emerald-700 border-emerald-200",
+            status === "SHIPPED" && "bg-purple-100 text-purple-700 border-purple-200",
+            status === "PROCESSING" && "bg-sky-100 text-sky-700 border-sky-200",
+            status === "PENDING" && "bg-gray-100 text-gray-600 border-gray-200"
+          )}
+        >
+          {status}
         </div>
       );
     },

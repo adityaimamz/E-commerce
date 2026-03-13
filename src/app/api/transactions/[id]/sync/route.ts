@@ -15,25 +15,25 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     const transaction = await prisma.transaction.findUnique({
       where: { id },
-      select: { id: true, userId: true, status: true },
+      select: { id: true, userId: true, paymentStatus: true },
     });
 
     if (!transaction || transaction.userId !== session.user.id) {
       return NextResponse.json({ success: false, message: "Transaction not found" }, { status: 404 });
     }
 
-    if (transaction.status !== "PENDING_PAYMENT") {
-      return NextResponse.json({ success: true, data: { status: transaction.status, synced: false } });
+    if (transaction.paymentStatus !== "PENDING") {
+      return NextResponse.json({ success: true, data: { paymentStatus: transaction.paymentStatus, synced: false } });
     }
 
     const midtransStatus = await snap.transaction.status(id);
-    const status = await TransactionService.updateTransactionStatus(
+    const result = await TransactionService.updateTransactionStatus(
       id,
       midtransStatus.transaction_status || "pending",
       midtransStatus.fraud_status || ""
-    );
+    ) as { paymentStatus: string; orderStatus: string };
 
-    return NextResponse.json({ success: true, data: { status, synced: true } });
+    return NextResponse.json({ success: true, data: { ...result, synced: true } });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message || "Failed to sync status" }, { status: 500 });
   }
