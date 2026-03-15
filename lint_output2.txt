@@ -1,0 +1,4 @@
+(node:29840) ExperimentalWarning: CommonJS module D:\node-v23.2.0-win-x64\node_modules\npm\node_modules\debug\src\node.js is loading ES Module D:\node-v23.2.0-win-x64\node_modules\npm\node_modules\supports-color\index.js using require().
+Support for loading ES Module in require() is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Invalid project directory provided, no such directory: D:\GitHub\e-commerce-ui-completed\lint

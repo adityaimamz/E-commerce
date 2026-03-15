@@ -3,6 +3,7 @@ import Link from "next/link";
 import SearchBar from "./SearchBar";
 import { Bell, Home, LogOut, Settings, ShoppingBag, User, ShieldCheck } from "lucide-react";
 import ShoppingCartIcon from "./ShoppingCartIcon";
+import NotificationBell from "./NotificationBell";
 import { auth, signOut } from "@/lib/auth";
 import {
   DropdownMenu,
@@ -37,7 +38,13 @@ const Navbar = async () => {
         <Link href="/">
           <Home className="w-4 h-4 text-gray-600"/>
         </Link>
-        <Bell className="w-4 h-4 text-gray-600"/>
+        
+        {session?.user ? (
+          <NotificationBell />
+        ) : (
+          <Bell className="w-4 h-4 text-gray-600"/>
+        )}
+
         <ShoppingCartIcon/>
         
         {session?.user ? (

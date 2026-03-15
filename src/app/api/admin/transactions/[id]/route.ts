@@ -55,6 +55,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       },
     });
 
+    // Create notification for the user
+    let title = "Status Pesanan Diperbarui";
+    let message = `Pesanan Anda (${id}) telah diperbarui.`;
+    
+    if (orderStatus && orderStatus !== current.orderStatus) {
+      title = "Status Pengiriman Diperbarui";
+      message = `Status pesanan Anda (${id}) telah menjadi ${orderStatus}.`;
+    } else if (paymentStatus && paymentStatus !== current.paymentStatus) {
+      title = "Status Pembayaran Diperbarui";
+      message = `Status pembayaran pesanan Anda (${id}) telah menjadi ${paymentStatus}.`;
+    }
+
+    if ((orderStatus && orderStatus !== current.orderStatus) || (paymentStatus && paymentStatus !== current.paymentStatus)) {
+      await prisma.notification.create({
+        data: {
+          userId: current.userId,
+          title,
+          message,
+          link: "/purchases"
+        }
+      });
+    }
+
     return NextResponse.json({ success: true, data: transaction });
   } catch (error: any) {
     if (error instanceof z.ZodError) {

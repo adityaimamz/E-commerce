@@ -24,14 +24,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updated = await prisma.$transaction(async (tx) => {
       const order = await tx.transaction.findUnique({
         where: { id },
-        select: { id: true, status: true },
+        select: { id: true, orderStatus: true },
       });
 
       if (!order) {
         throw new Error("Transaction not found");
       }
 
-      if (!["PACKING", "SHIPPED"].includes(order.status)) {
+      if (!["PACKING", "SHIPPED"].includes(order.orderStatus)) {
         throw new Error("Only PACKING orders can be shipped");
       }
 
@@ -56,7 +56,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
       const transaction = await tx.transaction.update({
         where: { id },
-        data: { status: "SHIPPED" },
+        data: { orderStatus: "SHIPPED" },
       });
 
       return { shipment, transaction };

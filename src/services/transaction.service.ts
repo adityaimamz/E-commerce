@@ -202,6 +202,16 @@ export class TransactionService {
         },
       });
 
+      // Create notification
+      await tx.notification.create({
+        data: {
+          userId: existing.userId,
+          title: "Status Pembayaran Diperbarui",
+          message: `Pembayaran untuk pesanan Anda (${existing.id}) telah menjadi ${paymentStatus}.`,
+          link: "/purchases",
+        }
+      });
+
       return { paymentStatus, orderStatus };
     });
   }
