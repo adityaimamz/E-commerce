@@ -9,6 +9,12 @@ export class CategoryService {
     });
   }
 
+  static async getCategoryBySlug(slug: string) {
+    return prisma.category.findUnique({
+      where: { slug },
+    });
+  }
+
   static async createCategory(data: z.infer<typeof createCategorySchema>) {
     return prisma.category.create({
       data,

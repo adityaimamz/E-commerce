@@ -3,6 +3,7 @@ import DbProductCard from "./DbProductCard";
 import Link from "next/link";
 import Filter from "./Filter";
 import { ProductService } from "@/services/product.service";
+import { CategoryService } from "@/services/category.service";
 
 interface ProductListProps {
   category?: string;
@@ -15,8 +16,12 @@ const ProductList = async ({ category, params, search, page = 1 }: ProductListPr
   // Look up categoryId from slug if category provided
   let categoryId: string | undefined;
   if (category && category !== "all") {
-    // We'll filter server-side by searching - the API supports categoryId not slug
-    // so we pass category as search term for now until category service is integrated
+    const categoryData = await CategoryService.getCategoryBySlug(category);
+    if (categoryData) {
+      categoryId = categoryData.id;
+    } else {
+      categoryId = "not-found";
+    }
   }
 
   const limit = params === "homepage" ? 8 : 20;
