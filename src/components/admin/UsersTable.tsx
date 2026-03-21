@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import AddUser from "@/components/admin/AddUser";
 import EditUser from "@/components/admin/EditUser";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 
 interface User {
@@ -38,6 +38,15 @@ interface UsersTableProps {
 
 const UsersTable = ({ initialData }: UsersTableProps) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = searchParams.get("query")?.toLowerCase() || "";
+
+  const filteredData = initialData.filter((user) => {
+    return (
+      (user.name?.toLowerCase().includes(query) ?? false) ||
+      (user.email?.toLowerCase().includes(query) ?? false)
+    );
+  });
   
   // State for Edit Sheet
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
@@ -112,14 +121,14 @@ const UsersTable = ({ initialData }: UsersTableProps) => {
             </tr>
           </thead>
           <tbody>
-            {initialData.length === 0 ? (
+            {filteredData.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Belum ada pengguna.
+                  {initialData.length === 0 ? "Belum ada pengguna." : "Tidak ada pengguna yang cocok dengan pencarian."}
                 </td>
               </tr>
             ) : (
-              initialData.map((user) => (
+              filteredData.map((user) => (
                 <tr key={user.id} className="border-b hover:bg-muted/50">
                   <td className="py-3 px-4 font-medium">{user.name || "-"}</td>
                   <td className="py-3 px-4 text-muted-foreground">{user.email}</td>

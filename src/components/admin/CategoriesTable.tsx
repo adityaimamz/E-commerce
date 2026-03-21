@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import AddCategory from "@/components/admin/AddCategory";
 import EditCategory from "@/components/admin/EditCategory";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 
 interface Category {
@@ -40,6 +40,15 @@ interface CategoriesTableProps {
 
 const CategoriesTable = ({ initialData }: CategoriesTableProps) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = searchParams.get("query")?.toLowerCase() || "";
+
+  const filteredData = initialData.filter((category) => {
+    return (
+      category.name.toLowerCase().includes(query) ||
+      category.slug.toLowerCase().includes(query)
+    );
+  });
   
   // State for Edit Sheet
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
@@ -113,14 +122,14 @@ const CategoriesTable = ({ initialData }: CategoriesTableProps) => {
             </tr>
           </thead>
           <tbody>
-            {initialData.length === 0 ? (
+            {filteredData.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Belum ada kategori.
+                  {initialData.length === 0 ? "Belum ada kategori." : "Tidak ada kategori yang cocok dengan pencarian."}
                 </td>
               </tr>
             ) : (
-              initialData.map((category) => (
+              filteredData.map((category) => (
                 <tr key={category.id} className="border-b hover:bg-muted/50">
                   <td className="py-3 px-4 font-medium">{category.name}</td>
                   <td className="py-3 px-4 text-muted-foreground">{category.slug}</td>

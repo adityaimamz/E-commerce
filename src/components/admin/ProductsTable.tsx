@@ -22,7 +22,7 @@ import {
 import AddProduct from "@/components/admin/AddProduct";
 import EditProduct from "@/components/admin/EditProduct";
 import { toast } from "react-toastify";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface ProductsTableProps {
   initialData: any[];
@@ -30,6 +30,15 @@ interface ProductsTableProps {
 
 export default function ProductsTable({ initialData }: ProductsTableProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = searchParams.get("query")?.toLowerCase() || "";
+
+  const filteredData = initialData.filter((product) => {
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  });
   
   // Sheet states
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -89,14 +98,14 @@ export default function ProductsTable({ initialData }: ProductsTableProps) {
             </tr>
           </thead>
           <tbody>
-            {initialData.length === 0 ? (
+            {filteredData.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Belum ada produk.
+                  {initialData.length === 0 ? "Belum ada produk." : "Tidak ada produk yang cocok dengan pencarian."}
                 </td>
               </tr>
             ) : (
-              initialData.map((product) => (
+              filteredData.map((product) => (
                 <tr key={product.id} className="border-b hover:bg-muted/50">
                   <td className="py-3 px-4 font-medium">{product.name}</td>
                   <td className="py-3 px-4 text-muted-foreground">{product.category}</td>
