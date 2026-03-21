@@ -1,30 +1,26 @@
 "use client";
 
 import { CART_UPDATED_EVENT } from "@/lib/cart-events";
-import useCartStore from "@/stores/cartStore";
 import { ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 const ShoppingCartIcon = () => {
-  const { cart, hasHydrated } = useCartStore();
-  const [serverCartCount, setServerCartCount] = useState<number | null>(null);
+  const [cartCount, setCartCount] = useState<number>(0);
   const [serverChecked, setServerChecked] = useState(false);
-
-  const localCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const fetchServerCartCount = useCallback(async () => {
     try {
       const res = await fetch("/api/cart", { cache: "no-store" });
 
       if (!res.ok) {
-        setServerCartCount(null);
+        setCartCount(0);
         return;
       }
 
       const data = await res.json();
       if (!data.success || !data.data) {
-        setServerCartCount(0);
+        setCartCount(0);
         return;
       }
 
@@ -32,9 +28,9 @@ const ShoppingCartIcon = () => {
         (total: number, item: { quantity: number }) => total + item.quantity,
         0
       );
-      setServerCartCount(count);
+      setCartCount(count);
     } catch {
-      setServerCartCount(null);
+      setCartCount(0);
     } finally {
       setServerChecked(true);
     }
@@ -56,9 +52,8 @@ const ShoppingCartIcon = () => {
     };
   }, [fetchServerCartCount]);
 
-  const cartCount = serverCartCount ?? localCartCount;
-
-  if (!hasHydrated && !serverChecked) return null;
+  if (!serverChecked) return null;
+  
   return (
     <Link href="/cart" className="relative">
       <ShoppingCart className="w-4 h-4 text-gray-600" />
